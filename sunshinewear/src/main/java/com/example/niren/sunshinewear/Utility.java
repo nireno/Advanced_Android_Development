@@ -39,19 +39,12 @@ public class Utility {
      * Helper method to convert the database representation of the date into something to display
      * to users.  As classy and polished a user experience as "20140102" is, we can do better.
      *
-     * @param context Context to use for resource localization
      * @param dateInMillis The date in milliseconds
      * @return a user-friendly representation of the date.
      */
-    public static String getFriendlyDayString(Context context, long dateInMillis, boolean displayLongToday) {
-        Time time = new Time();
-        time.setToNow();
-        long currentTime = System.currentTimeMillis();
-        int julianDay = Time.getJulianDay(dateInMillis, time.gmtoff);
-        int currentJulianDay = Time.getJulianDay(currentTime, time.gmtoff);
-
+    public static String getFriendlyDayString(long dateInMillis) {
         // Use the form "Mon Jun 3"
-        SimpleDateFormat shortenedDateFormat = new SimpleDateFormat("EEE MMM dd");
+        SimpleDateFormat shortenedDateFormat = new SimpleDateFormat("EEE, MMM dd yyyy");
         return shortenedDateFormat.format(dateInMillis);
     }
 
