@@ -196,4 +196,7 @@ public class Utility {
                 activeNetwork.isConnectedOrConnecting();
     }
 
+    public static String formatTemperature(Context context, double temperature) {
+        return String.format(context.getString(R.string.format_temperature), temperature);
+    }
    }

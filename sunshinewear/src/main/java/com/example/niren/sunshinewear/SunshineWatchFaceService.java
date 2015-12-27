@@ -21,6 +21,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.res.Resources;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -105,6 +107,10 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
 
         float mXOffset;
         float mYOffset;
+        private float mHighTempOffset;
+        private float mLowTempOffset;
+        private int mIconWidth;
+        private int mIconHeight;
 
         /**
          * Whether the display supports fewer bits for each color in ambient mode. When true, we
@@ -125,6 +131,10 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
             Resources resources = SunshineWatchFaceService.this.getResources();
             mYOffset = resources.getDimension(R.dimen.digital_y_offset);
             mLineHeight = resources.getDimension(R.dimen.digital_line_height);
+            mIconWidth = ((int) resources.getDimension(R.dimen.weather_icon_width));
+            mIconHeight = ((int) resources.getDimension(R.dimen.weather_icon_height));
+            mHighTempOffset = resources.getDimension(R.dimen.high_temp_offset);
+            mLowTempOffset = resources.getDimension(R.dimen.low_temp_offset);
 
             mBackgroundPaint = new Paint();
             mBackgroundPaint.setColor(resources.getColor(R.color.background));
@@ -277,6 +287,18 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
             canvas.drawText(text, mXOffset, mYOffset, mTextPaint);
             float y = mYOffset + mLineHeight;
             canvas.drawText(Utility.getFriendlyDayString(new Date().getTime()),mXOffset, y, mTextPaintDate);
+            Bitmap icon = BitmapFactory.decodeResource(getResources(), R.drawable.art_clear);
+            icon = Bitmap.createScaledBitmap(icon, mIconWidth, mIconHeight, true);
+
+            y = y + mLineHeight;
+            canvas.drawBitmap(icon, mXOffset, y, null);
+
+            float x = mXOffset + mHighTempOffset;
+            y = y + icon.getHeight() / 1.5f;
+            canvas.drawText(Utility.formatTemperature(getApplicationContext(), 10), x, y, mTextPaintDate);
+
+            x = x + mLowTempOffset;
+            canvas.drawText(Utility.formatTemperature(getApplicationContext(), -1), x, y, mTextPaintDate);
         }
 
         /**
