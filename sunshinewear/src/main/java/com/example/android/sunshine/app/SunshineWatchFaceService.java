@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.example.niren.sunshinewear;
+package com.example.android.sunshine.app;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -34,8 +34,20 @@ import android.os.Message;
 import android.support.wearable.watchface.CanvasWatchFaceService;
 import android.support.wearable.watchface.WatchFaceStyle;
 import android.text.format.Time;
+import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.WindowInsets;
+
+import com.example.android.sunshine.R;
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.wearable.DataApi;
+import com.google.android.gms.wearable.DataEvent;
+import com.google.android.gms.wearable.DataEventBuffer;
+import com.google.android.gms.wearable.DataItem;
+import com.google.android.gms.wearable.DataMap;
+import com.google.android.gms.wearable.DataMapItem;
+import com.google.android.gms.wearable.Wearable;
 
 import java.lang.ref.WeakReference;
 import java.util.Date;
@@ -88,7 +100,9 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
         }
     }
 
-    private class Engine extends CanvasWatchFaceService.Engine {
+    private class Engine extends CanvasWatchFaceService.Engine
+            implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener,
+            DataApi.DataListener {
         final Handler mUpdateTimeHandler = new EngineHandler(this);
         boolean mRegisteredTimeZoneReceiver = false;
         Paint mBackgroundPaint;
@@ -117,6 +131,12 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
          * disable anti-aliasing in ambient mode.
          */
         boolean mLowBitAmbient;
+
+        GoogleApiClient mGoogleApiClient = new GoogleApiClient.Builder(SunshineWatchFaceService.this)
+                .addConnectionCallbacks(this)
+                .addOnConnectionFailedListener(this)
+                .addApi(Wearable.API)
+                .build();
 
         @Override
         public void onCreate(SurfaceHolder holder) {
@@ -330,6 +350,42 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
                 long delayMs = INTERACTIVE_UPDATE_RATE_MS
                         - (timeMs % INTERACTIVE_UPDATE_RATE_MS);
                 mUpdateTimeHandler.sendEmptyMessageDelayed(MSG_UPDATE_TIME, delayMs);
+            }
+        }
+
+        @Override
+        public void onConnected(Bundle bundle) {
+            Log.d("OnDataChangedEvent", "connected");
+            Wearable.DataApi.addListener(mGoogleApiClient, Engine.this);
+        }
+
+        @Override
+        public void onConnectionSuspended(int i) {
+            Log.d("OnDataChangedEvent", "suspended");
+
+        }
+
+        @Override
+        public void onConnectionFailed(ConnectionResult connectionResult) {
+            Log.d("OnDataChangedEvent", "connection failed");
+        }
+
+        @Override
+        public void onDataChanged(DataEventBuffer dataEvents) {
+            Log.d("OnDataChangedEvent", "data changed");
+            for (DataEvent dataEvent : dataEvents) {
+                if (dataEvent.getType() != DataEvent.TYPE_CHANGED) {
+                    continue;
+                }
+
+                DataItem dataItem = dataEvent.getDataItem();
+                if (!dataItem.getUri().getPath().equals("/count")) {
+                    continue;
+                }
+
+                DataMapItem dataMapItem = DataMapItem.fromDataItem(dataItem);
+                DataMap dataMap = dataMapItem.getDataMap();
+                Log.d("OnDataChangedEvent", dataMap.get("THE_ANSWER").toString());
             }
         }
     }
