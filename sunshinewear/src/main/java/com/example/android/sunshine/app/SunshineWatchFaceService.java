@@ -73,6 +73,10 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
      */
     private static final int MSG_UPDATE_TIME = 0;
 
+    private double mTempHigh;
+    private double mTempLow;
+    private int mWeatherId;
+
     float mLineHeight;
 
     @Override
@@ -101,8 +105,7 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
     }
 
     private class Engine extends CanvasWatchFaceService.Engine
-            implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener,
-            DataApi.DataListener {
+            implements SunshineWearableListenerService.DataReceivedListener{
         final Handler mUpdateTimeHandler = new EngineHandler(this);
         boolean mRegisteredTimeZoneReceiver = false;
         Paint mBackgroundPaint;
@@ -131,12 +134,6 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
          * disable anti-aliasing in ambient mode.
          */
         boolean mLowBitAmbient;
-
-        GoogleApiClient mGoogleApiClient = new GoogleApiClient.Builder(SunshineWatchFaceService.this)
-                .addConnectionCallbacks(this)
-                .addOnConnectionFailedListener(this)
-                .addApi(Wearable.API)
-                .build();
 
         @Override
         public void onCreate(SurfaceHolder holder) {
@@ -167,6 +164,7 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
 
 
             mTime = new Time();
+            SunshineWearableListenerService.listener = this;
         }
 
         @Override
@@ -306,19 +304,21 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
                     : String.format("%d:%02d:%02d", mTime.hour, mTime.minute, mTime.second);
             canvas.drawText(text, mXOffset, mYOffset, mTextPaint);
             float y = mYOffset + mLineHeight;
-            canvas.drawText(Utility.getFriendlyDayString(new Date().getTime()),mXOffset, y, mTextPaintDate);
-            Bitmap icon = BitmapFactory.decodeResource(getResources(), R.drawable.art_clear);
-            icon = Bitmap.createScaledBitmap(icon, mIconWidth, mIconHeight, true);
+            canvas.drawText(Utility.getFriendlyDayString(new Date().getTime()), mXOffset, y, mTextPaintDate);
+            if(mWeatherId > 0) {
+                Bitmap icon = BitmapFactory.decodeResource(getResources(), Utility.getArtResourceForWeatherCondition(mWeatherId));
+                icon = Bitmap.createScaledBitmap(icon, mIconWidth, mIconHeight, true);
 
-            y = y + mLineHeight;
-            canvas.drawBitmap(icon, mXOffset, y, null);
+                y = y + mLineHeight;
+                canvas.drawBitmap(icon, mXOffset, y, null);
 
-            float x = mXOffset + mHighTempOffset;
-            y = y + icon.getHeight() / 1.5f;
-            canvas.drawText(Utility.formatTemperature(getApplicationContext(), 10), x, y, mTextPaintDate);
+                float x = mXOffset + mHighTempOffset;
+                y = y + icon.getHeight() / 1.5f;
+                canvas.drawText(Utility.formatTemperature(getApplicationContext(), mTempHigh), x, y, mTextPaintDate);
 
-            x = x + mLowTempOffset;
-            canvas.drawText(Utility.formatTemperature(getApplicationContext(), -1), x, y, mTextPaintDate);
+                x = x + mLowTempOffset;
+                canvas.drawText(Utility.formatTemperature(getApplicationContext(), mTempLow), x, y, mTextPaintDate);
+            }
         }
 
         /**
@@ -354,39 +354,10 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
         }
 
         @Override
-        public void onConnected(Bundle bundle) {
-            Log.d("OnDataChangedEvent", "connected");
-            Wearable.DataApi.addListener(mGoogleApiClient, Engine.this);
-        }
-
-        @Override
-        public void onConnectionSuspended(int i) {
-            Log.d("OnDataChangedEvent", "suspended");
-
-        }
-
-        @Override
-        public void onConnectionFailed(ConnectionResult connectionResult) {
-            Log.d("OnDataChangedEvent", "connection failed");
-        }
-
-        @Override
-        public void onDataChanged(DataEventBuffer dataEvents) {
-            Log.d("OnDataChangedEvent", "data changed");
-            for (DataEvent dataEvent : dataEvents) {
-                if (dataEvent.getType() != DataEvent.TYPE_CHANGED) {
-                    continue;
-                }
-
-                DataItem dataItem = dataEvent.getDataItem();
-                if (!dataItem.getUri().getPath().equals("/count")) {
-                    continue;
-                }
-
-                DataMapItem dataMapItem = DataMapItem.fromDataItem(dataItem);
-                DataMap dataMap = dataMapItem.getDataMap();
-                Log.d("OnDataChangedEvent", dataMap.get("THE_ANSWER").toString());
-            }
+        public void handleDataReceived(DataMap dataMap) {
+            mTempLow = dataMap.get("TEMP_LOW");
+            mTempHigh = dataMap.get("TEMP_HIGH");
+            mWeatherId = dataMap.get("WEATHER_ID");
         }
     }
 }
